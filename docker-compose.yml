@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=CHANGEME
+      #- GF_SERVER_ROOT_URL=CHANGEME
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    restart: unless-stopped
+    networks:
+      - network
+    ports:
+      - "127.0.0.1:3000:3000"
+      # use the setting below to expose Grafana
+      # and access it outside the machine
+      # BE CAREFUL: you should use HTTPS and put grafana
+      # behind a reverse proxy
+      # - "3000:3000"
+  influxdb:
+    restart: unless-stopped
+    container_name: influxdb
+    image: influxdb:1.8.2-alpine
+    networks:
+      - network
+    volumes:
+      #- ./influxdb/etc:/etc/influxdb
+      - influxdb-lib:/var/lib/influxdb
+    environment:
+      - INFLUXDB_ADMIN_USER=root
+      - INFLUXDB_ADMIN_PASSWORD=CHANGEME
+      - INFLUXDB_DB=entsoe
+      - INFLUXDB_MONITOR_STORE_ENABLED=false
+    ports:
+      - 8083:8083
+      - 8086:8086
+      - 8088:8088
+    privileged: true
+
+networks:
+  network:
+volumes:
+  grafana_data: {}
+  influxdb-lib: {}

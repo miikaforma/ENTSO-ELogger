@@ -1,0 +1,5 @@
+/logger/target
+/api/target
+/target
+.env*
+docker-compose.*.yml

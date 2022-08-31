@@ -1,0 +1,6 @@
+/logger/target
+/api/target
+/grafana
+/target
+.env*
+docker-compose*

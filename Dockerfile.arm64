@@ -1,0 +1,23 @@
+# Build Stage
+FROM rust:latest AS builder
+WORKDIR /usr/src/
+RUN rustup target add aarch64-unknown-linux-gnu
+RUN apt update && apt install -y musl-tools musl-dev
+RUN update-ca-certificates
+
+RUN USER=root cargo new logger
+WORKDIR /usr/src/logger
+COPY ./logger/Cargo.toml ./Cargo.lock ./
+RUN echo "openssl = { version = \"0.10\", features = [\"vendored\"] }" >> ./Cargo.toml
+COPY ./api ../api
+RUN cargo build --release
+
+COPY ./logger/src ./src
+RUN cargo install --target aarch64-unknown-linux-gnu --path .
+
+# Bundle Stage
+FROM debian:buster-slim
+
+COPY --from=builder /usr/local/cargo/bin/logger .
+USER 1000
+CMD ["./logger"]
