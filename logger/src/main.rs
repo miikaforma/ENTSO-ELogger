@@ -134,7 +134,11 @@ async fn get_fetch_time_interval(client: &Client, in_domain: &str, out_domain: &
         }
     }
 
-    let end_time = start_time + ChronoDuration::days(1);
+    let days: i64 = dotenv::var("INTERVAL_DAYS")
+        .map(|var| var.parse::<i64>())
+        .unwrap_or(Ok(1))
+        .unwrap();
+    let end_time = start_time + ChronoDuration::days(days);
     format!("{}/{}", start_time.format("%Y-%m-%dT%H:00Z"), end_time.format("%Y-%m-%dT%H:00Z"))
 }
 
