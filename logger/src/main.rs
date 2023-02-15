@@ -8,7 +8,7 @@ use chrono::NaiveDateTime;
 use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use dotenv::dotenv;
-use influxdb::Client;
+use influxdb::{Client, Error};
 use influxdb::InfluxDbWriteable;
 use influxdb::ReadQuery;
 use tokio::time::sleep;
@@ -32,6 +32,7 @@ struct PriceData {
     curve_type: String,
     timestamp: String,
     price: f32,
+    dirty: Option<i32>
 }
 
 async fn fetch_and_log_new_entries(
@@ -81,6 +82,9 @@ async fn log_new_day_ahead_price(client: &Client,
     price: f32) {
     println!("Logging UTC: {:?} - {}", time, price);
 
+    // Delete the current row if it's dirty
+    delete_if_dirty(client, in_domain, out_domain, time).await;
+
     let current_data = PriceData {
         time: *time,
         type_tag: document.r#type.to_string(),
@@ -94,6 +98,7 @@ async fn log_new_day_ahead_price(client: &Client,
         curve_type: time_serie.curve_type.to_string(),
         timestamp: time.format("%Y-%m-%dT%H:%MZ").to_string(),
         price: price,
+        dirty: None,
     };
 
     let write_result = client
@@ -104,9 +109,42 @@ async fn log_new_day_ahead_price(client: &Client,
     }
 }
 
+async fn delete_if_dirty(client: &Client, in_domain: &str, out_domain: &str, time: &DateTime<Utc>) {
+    let read_query = ReadQuery::new(format!("SELECT * FROM dayAheadPrices WHERE type_tag='A44' AND in_domain_tag='{}' AND out_domain_tag='{}' AND time = '{}' AND dirty = 1 ORDER BY time DESC LIMIT 1", in_domain, out_domain, time.to_rfc3339()));
+
+    let read_result = client
+        .json_query(read_query)
+        .await
+        .and_then(|mut db_result| db_result.deserialize_next::<PriceData>());
+
+    match read_result {
+        Ok(result) => {
+            if result.series.len() > 0 && result.series[0].values.len() > 0
+            {
+                println!("Query: {}", format!("DELETE FROM dayAheadPrices WHERE type_tag='A44' AND in_domain_tag='{}' AND out_domain_tag='{}' AND time = '{}' AND dirty = 1", in_domain, out_domain, time.to_rfc3339()));
+                // let read_query = ReadQuery::new(format!("DELETE FROM dayAheadPrices WHERE time = '{}'", time.to_rfc3339()));
+                let read_query = ReadQuery::new(format!("DELETE FROM dayAheadPrices WHERE type_tag='A44' AND in_domain_tag='{}' AND out_domain_tag='{}' AND time = '{}'", in_domain, out_domain, time.to_rfc3339()));
+
+                let read_result = client.query(read_query).await;
+                match read_result {
+                    Ok(_) => {
+                    }
+                    Err(err) => {
+                        eprintln!("Error deleting dayAheadPrice from the db: {}", err);
+                    }
+                }
+            }
+        },
+        Err(err) => {
+            eprintln!("Error reading dayAheadPrices from the db: {}", err);
+        }
+    }
+}
+
 // Example of the format: 2022-06-30T21:00Z/2022-07-31T21:00Z
 async fn get_fetch_time_interval(client: &Client, in_domain: &str, out_domain: &str, ) -> String {
-    let read_query = ReadQuery::new(format!("SELECT * FROM dayAheadPrices WHERE type_tag='A44' AND in_domain_tag='{}' AND out_domain='{}' ORDER BY time DESC LIMIT 1", in_domain, out_domain));
+    let read_query = ReadQuery::new(format!("SELECT * FROM (SELECT * FROM dayAheadPrices fill(-111)) WHERE type_tag='A44' AND in_domain_tag='{}' AND out_domain_tag='{}' AND dirty = -111 ORDER BY time DESC LIMIT 1", in_domain, out_domain));
+    // let read_query = ReadQuery::new(format!("SELECT * FROM dayAheadPrices WHERE type_tag='A44' AND in_domain_tag='{}' AND out_domain='{}' ORDER BY time DESC LIMIT 1", in_domain, out_domain));
 
     let mut start_time = chrono::offset::Utc::now();
     let naive_time = NaiveDateTime::parse_from_str(&dotenv::var("START_TIME").unwrap_or("".to_string()), "%Y-%m-%dT%H:%MZ");
@@ -193,6 +231,24 @@ mod tests {
 
         let response = get_fetch_time_interval(&client, &in_domain, &out_domain).await;
         println!("Fetch interval {}", response);
+    }
+
+    #[tokio::test]
+    async fn test_delete_if_dirty() {
+        dotenv().ok();
+
+        let database_url = dotenv::var("DATABASE_URL").unwrap_or("http://localhost:8086".to_string());
+        let database_name = dotenv::var("DATABASE_NAME").unwrap_or("entsoe".to_string());
+
+        // Connect to database
+        let client = Client::new(database_url, database_name);
+
+        let in_domain = dotenv::var("IN_DOMAIN").unwrap();
+        let out_domain = dotenv::var("OUT_DOMAIN").unwrap();
+        let time = Utc.from_utc_datetime(&NaiveDateTime::parse_from_str("2023-02-12T23:00:00", "%Y-%m-%dT%H:%M:%S").unwrap());
+
+        let response = delete_if_dirty(&client, &in_domain, &out_domain, &time).await;
+        println!("Deleted {}", time.to_rfc3339());
     }
 }
 
