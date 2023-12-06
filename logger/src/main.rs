@@ -8,11 +8,18 @@ use chrono::NaiveDateTime;
 use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use dotenv::dotenv;
-use influxdb::{Client, Error};
+use influxdb::{Client};
 use influxdb::InfluxDbWriteable;
 use influxdb::ReadQuery;
 use tokio::time::sleep;
 use serde::{Deserialize, Serialize};
+use actix_web::{middleware, web, App, HttpServer};
+use crate::endpoints::post;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::join;
+
+mod endpoints;
 
 #[derive(Debug, InfluxDbWriteable, Serialize, Deserialize)]
 #[allow(non_snake_case)]
@@ -50,9 +57,9 @@ async fn fetch_and_log_new_entries(
     }
 }
 
-async fn log_new_day_ahead_prices(client: &Client, 
-    in_domain: &str, 
-    out_domain: &str, 
+async fn log_new_day_ahead_prices(client: &Client,
+    in_domain: &str,
+    out_domain: &str,
     data: &PublicationMarketDocument) {
     println!("Document created at {}", data.created_date_time_as_utc().unwrap());
 
@@ -73,12 +80,12 @@ async fn log_new_day_ahead_prices(client: &Client,
     }
 }
 
-async fn log_new_day_ahead_price(client: &Client, 
-    in_domain: &str, 
-    out_domain: &str, 
-    document: &PublicationMarketDocument, 
-    time_serie: &TimeSeries, 
-    time: &DateTime<Utc>, 
+async fn log_new_day_ahead_price(client: &Client,
+    in_domain: &str,
+    out_domain: &str,
+    document: &PublicationMarketDocument,
+    time_serie: &TimeSeries,
+    time: &DateTime<Utc>,
     price: f32) {
     println!("Logging UTC: {:?} - {}", time, price);
 
@@ -156,7 +163,7 @@ async fn get_fetch_time_interval(client: &Client, in_domain: &str, out_domain: &
         .json_query(read_query)
         .await
         .and_then(|mut db_result| db_result.deserialize_next::<PriceData>());
-        
+
     // let read_result = client.query(read_query).await;
     match read_result {
         Ok(result) => {
@@ -165,7 +172,7 @@ async fn get_fetch_time_interval(client: &Client, in_domain: &str, out_domain: &
                 let data = &result.series[0].values[0];
                 // println!("{:?}", data);
                 start_time = data.time;
-            }            
+            }
         },
         Err(err) => {
             eprintln!("Error reading dayAheadPrices from the db: {}", err);
@@ -197,19 +204,49 @@ async fn main() {
     let out_domain = dotenv::var("OUT_DOMAIN").unwrap();
 
     // Connect to database
-    let client = Client::new(database_url, database_name);
+    let client = Arc::new(Mutex::new(Client::new(database_url, database_name)));
+    let server_client = Arc::clone(&client);
 
-    loop {
-        fetch_and_log_new_entries(
-            &client,
-            &security_token,
-            &in_domain,
-            &out_domain,
-            &get_fetch_time_interval(&client, &in_domain, &out_domain).await.to_string(),
-        )
-        .await;
-        sleep(Duration::from_millis(interval)).await;
-    }
+    let server = match HttpServer::new(move || {
+        let app_client = Arc::clone(&server_client);
+
+        App::new()
+            .wrap(middleware::Compress::default())
+            .app_data(web::Data::new(app_client))
+            // register HTTP requests handlers
+            .service(post::update_dayahead_prices)
+    })
+        .bind("0.0.0.0:9092")
+    {
+        Ok(value) => {
+            println!("REST API started at 0.0.0.0:9092");
+            value
+        },
+        Err(error) => panic!("Error binding to socket:{:?}", error),
+    };
+
+    let server_task = async {
+        let _ = server.run().await;
+    };
+
+    let update_task = async {
+        let update_client = Arc::clone(&client);
+
+        loop {
+            let client_ref = update_client.lock().await;
+            fetch_and_log_new_entries(
+                &(*client_ref),
+                &security_token,
+                &in_domain,
+                &out_domain,
+                &get_fetch_time_interval(&(*client_ref), &in_domain, &out_domain).await.to_string(),
+            )
+                .await;
+            sleep(Duration::from_millis(interval)).await;
+        }
+    };
+
+    join!(server_task, update_task);
 }
 
 #[cfg(test)]
@@ -222,7 +259,7 @@ mod tests {
 
         let database_url = dotenv::var("DATABASE_URL").unwrap_or("http://localhost:8086".to_string());
         let database_name = dotenv::var("DATABASE_NAME").unwrap_or("entsoe".to_string());
-    
+
         // Connect to database
         let client = Client::new(database_url, database_name);
 
@@ -231,6 +268,52 @@ mod tests {
 
         let response = get_fetch_time_interval(&client, &in_domain, &out_domain).await;
         println!("Fetch interval {}", response);
+    }
+
+    #[tokio::test]
+    async fn test_get_fetch_eet_eest() {
+        dotenv().ok();
+
+        let database_url = dotenv::var("DATABASE_URL").unwrap_or("http://localhost:8086".to_string());
+        let database_name = dotenv::var("DATABASE_NAME").unwrap_or("solarman".to_string());
+        let security_token = dotenv::var("SECURITY_TOKEN").unwrap();
+
+        // Connect to database
+        let client = Client::new(database_url, database_name);
+
+        let in_domain = dotenv::var("IN_DOMAIN").unwrap();
+        let out_domain = dotenv::var("OUT_DOMAIN").unwrap();
+
+        fetch_and_log_new_entries(
+            &client,
+            &security_token,
+            &in_domain,
+            &out_domain,
+            "2022-02-28T22:00Z/2022-03-31T21:00Z",
+        ).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_fetch_eest_eet() {
+        dotenv().ok();
+
+        let database_url = dotenv::var("DATABASE_URL").unwrap_or("http://localhost:8086".to_string());
+        let database_name = dotenv::var("DATABASE_NAME").unwrap_or("solarman".to_string());
+        let security_token = dotenv::var("SECURITY_TOKEN").unwrap();
+
+        // Connect to database
+        let client = Client::new(database_url, database_name);
+
+        let in_domain = dotenv::var("IN_DOMAIN").unwrap();
+        let out_domain = dotenv::var("OUT_DOMAIN").unwrap();
+
+        fetch_and_log_new_entries(
+            &client,
+            &security_token,
+            &in_domain,
+            &out_domain,
+            "2022-10-29T21:00Z/2022-10-30T22:00Z",
+        ).await;
     }
 
     #[tokio::test]
