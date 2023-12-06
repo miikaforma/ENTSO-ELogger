@@ -14,9 +14,7 @@ use influxdb::ReadQuery;
 use tokio::time::sleep;
 use serde::{Deserialize, Serialize};
 use actix_web::{middleware, web, App, HttpServer};
-use crate::endpoints::post;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use crate::endpoints::{health, post};
 use tokio::join;
 
 mod endpoints;
@@ -204,16 +202,15 @@ async fn main() {
     let out_domain = dotenv::var("OUT_DOMAIN").unwrap();
 
     // Connect to database
-    let client = Arc::new(Mutex::new(Client::new(database_url, database_name)));
-    let server_client = Arc::clone(&client);
+    let update_client = Client::new(&database_url, &database_name);
+    let server_client = Client::new(&database_url, &database_name);
 
     let server = match HttpServer::new(move || {
-        let app_client = Arc::clone(&server_client);
-
         App::new()
             .wrap(middleware::Compress::default())
-            .app_data(web::Data::new(app_client))
+            .app_data(web::Data::new(server_client.clone()))
             // register HTTP requests handlers
+            .service(health::health_check)
             .service(post::update_dayahead_prices)
     })
         .bind("0.0.0.0:9092")
@@ -230,16 +227,13 @@ async fn main() {
     };
 
     let update_task = async {
-        let update_client = Arc::clone(&client);
-
         loop {
-            let client_ref = update_client.lock().await;
             fetch_and_log_new_entries(
-                &(*client_ref),
+                &update_client,
                 &security_token,
                 &in_domain,
                 &out_domain,
-                &get_fetch_time_interval(&(*client_ref), &in_domain, &out_domain).await.to_string(),
+                &get_fetch_time_interval(&update_client, &in_domain, &out_domain).await.to_string(),
             )
                 .await;
             sleep(Duration::from_millis(interval)).await;
