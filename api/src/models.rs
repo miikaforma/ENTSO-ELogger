@@ -32,7 +32,7 @@ impl PublicationMarketDocument {
         if naive_time.is_err() {
             return None;
         }
-        // println!("Created at UTC {}", naive_time.unwrap());
+        debug!("Created at UTC {}", naive_time.unwrap());
 
         Some(Utc.from_utc_datetime(&naive_time.unwrap()))
     }

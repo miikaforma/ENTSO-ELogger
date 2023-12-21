@@ -17,5 +17,12 @@ anyhow = { version = "1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0.64" }
 actix-web = "4.4"
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
+thiserror = "1.0.30"
+serde_yaml = "0.9.19"
 
 api = { path = "../api" }
+
+# Logging
+log = "0.4"
+flexi_logger = { version = "0.17", features = ["colors"] }

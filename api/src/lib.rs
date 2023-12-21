@@ -1,7 +1,9 @@
+#[macro_use]
+extern crate log;
+
 pub mod models;
 
 use http::{StatusCode, header::USER_AGENT};
-use dotenv::dotenv;
 pub use models::*;
 use serde_xml_rs::from_str;
 
@@ -19,14 +21,14 @@ pub async fn day_ahead_prices(security_token: &str, in_domain: &str, out_domain:
     let data_str = res
         .text()
         .await?;
-    //println!("{}", data_str);
+    debug!("{}", data_str);
 
     if status != StatusCode::OK {
         return Err(anyhow::anyhow!(data_str));
     }
 
     let data: PublicationMarketDocument = from_str(&data_str)?;
-    // println!("PublicationMarketDocument: {:#?}", data);
+    debug!("PublicationMarketDocument: {:#?}", data);
 
     Ok(data)
 }
@@ -35,6 +37,7 @@ pub async fn day_ahead_prices(security_token: &str, in_domain: &str, out_domain:
 mod tests {
     use chrono::Duration;
     use serde_xml_rs::from_str;
+    use dotenv::dotenv;
 
     use super::*;
 
@@ -48,18 +51,18 @@ mod tests {
         let time_interval = "2022-06-30T21:00Z/2022-07-31T21:00Z";
 
         let response = day_ahead_prices(&security_token, &in_domain, &out_domain, &time_interval).await.unwrap();
-        println!("Document created at {}", response.created_date_time_as_utc().unwrap());
+        info!("Document created at {}", response.created_date_time_as_utc().unwrap());
 
         for time_serie in response.time_series.iter() {
             for period in time_serie.period.iter() {
                 let start = &period.time_interval.start_as_utc();
                 if start.is_none() {
-                    println!("Skipping logging because start time couldn't be parsed");
+                    warn!("Skipping logging because start time couldn't be parsed");
                     continue;
                 }
 
                 for point in period.point.iter() {
-                    println!("{} - {:?}", start.unwrap() + Duration::hours((point.position - 1).into()), point);
+                    info!("{} - {:?}", start.unwrap() + Duration::hours((point.position - 1).into()), point);
                 }
             }
         }
@@ -111,20 +114,20 @@ mod tests {
         </Publication_MarketDocument>"#;
 
         let market_document: PublicationMarketDocument = from_str(document).unwrap();
-        // println!("{:?}", market_document);
+        debug!("{:?}", market_document);
 
-        println!("Created at {}", market_document.created_date_time_as_utc().unwrap());
+        info!("Created at {}", market_document.created_date_time_as_utc().unwrap());
 
         for time_serie in market_document.time_series.iter() {
             for period in time_serie.period.iter() {
                 let start = &period.time_interval.start_as_utc();
                 if start.is_none() {
-                    println!("Skipping logging because start time couldn't be parsed");
+                    warn!("Skipping logging because start time couldn't be parsed");
                     continue;
                 }
 
                 for point in period.point.iter() {
-                    println!("{} - {:?}", start.unwrap() + Duration::hours((point.position - 1).into()), point);
+                    info!("{} - {:?}", start.unwrap() + Duration::hours((point.position - 1).into()), point);
                 }
             }
         }

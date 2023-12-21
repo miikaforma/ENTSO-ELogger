@@ -3,3 +3,6 @@
 /target
 .env*
 docker-compose.*.yml
+logger/logs/*
+.idea
+docker-compose-dev.yml

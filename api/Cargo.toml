@@ -19,3 +19,6 @@ serde-xml-rs = { version = "0.5.1" }
 serde-aux = { version = "2.2.0" }
 anyhow = { version = "1.0" }
 http = { version = "0.2.4" }
+
+# Logging
+log = "0.4"
