@@ -5,7 +5,7 @@ ENV CC_aarch64_unknown_linux_musl=clang
 ENV AR_aarch64_unknown_linux_musl=llvm-ar
 # The below commented line works, need to test if the ones under it also work (didn't work)
 # https://github.com/briansmith/ring/issues/1414#issuecomment-1596300080
-ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld"
+# ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld"
 # ENV CFLAGS_aarch64_unknown_linux_musl="-nostdinc -nostdlib -isystem/usr/include/x86_64-linux-musl/"
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld -Clink-args=-L/usr/lib/x86_64-linux-musl/"
 
