@@ -69,9 +69,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y perl make musl-tools musl-dev clang llvm cmake
-          sudo update-ca-certificates
+            brew install perl make musl clang llvm cmake
 
       - name: Set environment variables
         run: |
