@@ -235,6 +235,8 @@ jobs:
           updateOnlyUnreleased: true
       - name: Upload binaries
         uses: actions/upload-release-asset@v1
+        env:
+          RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
@@ -242,6 +244,8 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Upload binaries
         uses: actions/upload-release-asset@v1
+        env:
+          RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
@@ -249,6 +253,8 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Build and push multi-arch Docker image
         uses: docker/build-push-action@v2
+        env:
+          RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
         with:
           context: .
           file: ./Dockerfile.release
