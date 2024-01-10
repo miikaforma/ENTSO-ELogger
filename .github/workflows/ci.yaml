@@ -148,7 +148,7 @@ jobs:
 
       - name: Extract binary
         run: |
-          docker create --name temp_container ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:x86-${{ env.RELEASE_VERSION }}
+          docker create --name temp_container ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-${{ env.RELEASE_VERSION }}
           docker cp temp_container:/logger ./entsoe-logger-x86_64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
           docker rm temp_container
 
@@ -196,14 +196,14 @@ jobs:
       - name: Extract binary
         run: |
           docker create --name temp_container ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-${{ env.RELEASE_VERSION }}
-          docker cp temp_container:/logger ./entsoe-logger-aarch64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
+          docker cp temp_container:/logger ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
           docker rm temp_container
 
       - name: Upload binary
         uses: actions/upload-artifact@v2
         with:
-          name: entsoe-logger-aarch64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
-          path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
+          name: entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+          path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
 
   create_release:
     needs: [buildVariables, x86, arm64]
@@ -237,13 +237,25 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
-          asset_name: entsoe-logger-x86_64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
+          asset_path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+          asset_name: entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
           asset_content_type: application/octet-stream
       - name: Upload binaries
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
-          asset_name: entsoe-logger-aarch64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
+          asset_path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+          asset_name: entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
           asset_content_type: application/octet-stream
+      - name: Build and push multi-arch Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile.release
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:${{ env.RELEASE_VERSION }},${{ secrets.DOCKER_USERNAME }}/entsoe-logger:latest
+          build-args: |
+            TARGETARCH
+            BINARY_X86=./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+            BINARY_ARM64=./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
