@@ -19,12 +19,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Check commit message
+        id: check_message
+        run: |
+          COMMIT_MESSAGE=$(git log --format=%B -n 1)
+          if [[ "$COMMIT_MESSAGE" != *"#major"* ]] && [[ "$COMMIT_MESSAGE" != *"#minor"* ]] && [[ "$COMMIT_MESSAGE" != *"#patch"* ]]; then
+            echo "The latest commit message does not include a version bump keyword. Defaulting to patch version bump."
+            echo "VERSION_BUMP=patch" >> $GITHUB_ENV
+          else
+            echo "VERSION_BUMP=${{ github.event.inputs.versionBump }}" >> $GITHUB_ENV
+          fi
+    
       - name: Bump version and push tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: ${{ github.event.inputs.versionBump }}
+          default_bump: ${{ env.VERSION_BUMP }}
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
