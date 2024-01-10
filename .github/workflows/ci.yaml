@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-musl, aarch64-unknown-linux-musl]
+        target: [x86_64-unknown-linux-musl]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -22,14 +22,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y perl make musl-tools musl-dev clang llvm cmake libzstd-dev
+          sudo apt-get install -y perl make musl-tools musl-dev
           sudo update-ca-certificates
 
-      - name: Set environment variables
-        run: |
-          echo "CC_aarch64_unknown_linux_musl=clang" >> $GITHUB_ENV
-          echo "AR_aarch64_unknown_linux_musl=llvm-ar" >> $GITHUB_ENV
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-Clink-self-contained=yes -Clinker=rust-lld -Clink-args=-L/usr/lib/x86_64-linux-musl/" >> $GITHUB_ENV
+    #   - name: Set environment variables
+    #     run: |
+    #       echo "CC_aarch64_unknown_linux_musl=clang" >> $GITHUB_ENV
+    #       echo "AR_aarch64_unknown_linux_musl=llvm-ar" >> $GITHUB_ENV
+    #       echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-Clink-self-contained=yes -Clinker=rust-lld -Clink-args=-L/usr/lib/x86_64-linux-musl/" >> $GITHUB_ENV
 
       - name: Check commit message
         id: check_message
