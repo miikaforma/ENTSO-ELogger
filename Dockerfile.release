@@ -1,9 +1,18 @@
-FROM scratch
-COPY choose_binary.sh /choose_binary.sh
+# First stage: build the script
+FROM alpine as builder
+COPY entsoe-logger-x86_64-unknown-linux-musl /entsoe-logger-x86_64-unknown-linux-musl
+COPY entsoe-logger-aarch64-unknown-linux-musl /entsoe-logger-aarch64-unknown-linux-musl
 ARG TARGETARCH
 ARG BINARY_X86
 ARG BINARY_ARM64
-RUN chmod +x /choose_binary.sh && ["/choose_binary.sh", "${TARGETARCH}", "${BINARY_X86}", "${BINARY_ARM64}"]
+RUN chmod +x /choose_binary.sh && /choose_binary.sh "${TARGETARCH}" "${BINARY_X86}" "${BINARY_ARM64}"
+
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then export BINARY_PATH=entsoe-logger-x86_64-unknown-linux-musl; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then export BINARY_PATH=entsoe-logger-aarch64-unknown-linux-musl; else export BINARY_PATH=entsoe-logger-x86_64-unknown-linux-musl; fi \
+    && mv ./${BINARY_PATH} ./entsoe-logger
+
+# Second stage: create the final image
+FROM scratch
+COPY --from=builder /entsoe-logger /entsoe-logger
 
 USER 1000
 CMD ["./entsoe-logger"]
