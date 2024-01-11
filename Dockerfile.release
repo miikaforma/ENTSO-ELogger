@@ -3,7 +3,7 @@ COPY choose_binary.sh /choose_binary.sh
 ARG TARGETARCH
 ARG BINARY_X86
 ARG BINARY_ARM64
-RUN ["/choose_binary.sh", "${TARGETARCH}", "${BINARY_X86}", "${BINARY_ARM64}"]
+RUN chmod +x /choose_binary.sh && ["/choose_binary.sh", "${TARGETARCH}", "${BINARY_X86}", "${BINARY_ARM64}"]
 
 USER 1000
 CMD ["./entsoe-logger"]
