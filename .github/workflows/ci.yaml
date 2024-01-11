@@ -239,24 +239,25 @@ jobs:
           prerelease: false
           allowUpdates: true
           updateOnlyUnreleased: true
-      - name: Upload binaries
-        uses: actions/upload-release-asset@v1
-        env:
-          RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-          asset_name: entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-          asset_content_type: application/octet-stream
-      - name: Upload binaries
-        uses: actions/upload-release-asset@v1
-        env:
-          RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-          asset_name: entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-          asset_content_type: application/octet-stream
+          artifacts: "entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }},entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}"
+      # - name: Upload binaries
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+      #     asset_name: entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+      #     asset_content_type: application/octet-stream
+      # - name: Upload binaries
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+      #     asset_name: entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+      #     asset_content_type: application/octet-stream
       - name: Move images
         run: |
           mv ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-x86_64-unknown-linux-musl
