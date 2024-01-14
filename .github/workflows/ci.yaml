@@ -155,7 +155,7 @@ jobs:
           docker rm temp_container
 
       - name: Upload binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: x86_64
           path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
@@ -204,7 +204,7 @@ jobs:
           docker rm temp_container
 
       - name: Upload binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: aarch64
           path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
@@ -224,12 +224,12 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download x86_64 artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: x86_64
           path: ./artifacts
       - name: Download aarch64 artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: aarch64
           path: ./artifacts
@@ -272,8 +272,8 @@ jobs:
       #     asset_content_type: application/octet-stream
       - name: Move images
         run: |
-          mv ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-x86_64-unknown-linux-musl
-          mv ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-aarch64-unknown-linux-musl
+          mv ./artifacts/entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-x86_64-unknown-linux-musl
+          mv ./artifacts/entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-aarch64-unknown-linux-musl
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
