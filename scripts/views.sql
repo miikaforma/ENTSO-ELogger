@@ -57,3 +57,8 @@ SELECT add_continuous_aggregate_policy('average_kwh_price_day_by_day',
    start_offset => NULL,
    end_offset => NULL,
    schedule_interval => INTERVAL '1 hour');
+
+-- Manual refresh for the views
+-- CALL refresh_continuous_aggregate('average_kwh_price_day_by_day', NULL, NULL);
+-- CALL refresh_continuous_aggregate('average_kwh_price_month_by_month', NULL, NULL);
+-- CALL refresh_continuous_aggregate('average_kwh_price_year_by_year', NULL, NULL);
