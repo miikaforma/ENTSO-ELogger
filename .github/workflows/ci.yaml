@@ -134,19 +134,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # - name: Build and push
-      #   id: x86_build
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     platforms: linux/amd64
-      #     file: ./Dockerfile
-      #     push: ${{ inputs.push }}
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-${{ env.RELEASE_VERSION }},${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-latest
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
-      - name: Pull image
-        run: docker pull ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-${{ env.RELEASE_VERSION }}
+      - name: Build and push
+        id: x86_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          file: ./Dockerfile
+          push: ${{ inputs.push }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-${{ env.RELEASE_VERSION }},${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # - name: Pull image
+      #   run: docker pull ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:amd64-${{ env.RELEASE_VERSION }}
 
       - name: Extract binary
         run: |
@@ -183,19 +183,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # - name: Build and push
-      #   id: arm64_build
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     platforms: linux/arm64
-      #     file: ./Dockerfile.arm64
-      #     push: ${{ inputs.push }}
-      #     tags: ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-${{ env.RELEASE_VERSION }},${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-latest
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
-      - name: Pull image
-        run: docker pull ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-${{ env.RELEASE_VERSION }}
+      - name: Build and push
+        id: arm64_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          file: ./Dockerfile.arm64
+          push: ${{ inputs.push }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-${{ env.RELEASE_VERSION }},${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # - name: Pull image
+      #   run: docker pull ${{ secrets.DOCKER_USERNAME }}/entsoe-logger:arm64-${{ env.RELEASE_VERSION }}
 
       - name: Extract binary
         run: |
