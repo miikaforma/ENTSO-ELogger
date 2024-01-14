@@ -34,7 +34,7 @@ jobs:
       commit_hash: ${{ steps.set_outputs.outputs.COMMIT_HASH }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
@@ -122,12 +122,12 @@ jobs:
       COMMIT_HASH: ${{ needs.buildVariables.outputs.commit_hash }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -136,7 +136,7 @@ jobs:
 
       # - name: Build and push
       #   id: x86_build
-      #   uses: docker/build-push-action@v4
+      #   uses: docker/build-push-action@v5
       #   with:
       #     context: .
       #     platforms: linux/amd64
@@ -155,7 +155,7 @@ jobs:
           docker rm temp_container
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: x86_64
           path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ needs.buildVariables.outputs.release_version }}
@@ -171,21 +171,21 @@ jobs:
       COMMIT_HASH: ${{ needs.buildVariables.outputs.commit_hash }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # - name: Build and push
       #   id: arm64_build
-      #   uses: docker/build-push-action@v4
+      #   uses: docker/build-push-action@v5
       #   with:
       #     context: .
       #     platforms: linux/arm64
@@ -204,7 +204,7 @@ jobs:
           docker rm temp_container
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aarch64
           path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
@@ -220,7 +220,7 @@ jobs:
       RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Download x86_64 artifacts
@@ -252,34 +252,16 @@ jobs:
           allowUpdates: true
           updateOnlyUnreleased: true
           artifacts: "./artifacts/*"
-      # - name: Upload binaries
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: ./entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-      #     asset_name: entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-      #     asset_content_type: application/octet-stream
-      # - name: Upload binaries
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: ./entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-      #     asset_name: entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-      #     asset_content_type: application/octet-stream
       - name: Move images
         run: |
           mv ./artifacts/entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-x86_64-unknown-linux-musl
           mv ./artifacts/entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }} ./entsoe-logger-aarch64-unknown-linux-musl
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
