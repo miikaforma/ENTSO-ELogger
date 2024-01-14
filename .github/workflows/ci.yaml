@@ -225,6 +225,11 @@ jobs:
           fetch-depth: 0
       - name: Download artifacts
         uses: actions/download-artifact@v2
+        with:
+          name: result
+          path: ./artifacts
+      - name: List
+        run: find ./artifacts
       - name: Create Release
         id: create_release
         uses: ncipollo/release-action@v1
@@ -241,9 +246,7 @@ jobs:
           prerelease: false
           allowUpdates: true
           updateOnlyUnreleased: true
-          artifacts: |
-            "entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}/*"
-            "entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}/*"
+          artifacts: "./artifacts/*"
       # - name: Upload binaries
       #   uses: actions/upload-release-asset@v1
       #   env:
@@ -270,6 +273,11 @@ jobs:
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push multi-arch Docker image
         uses: docker/build-push-action@v2
         with:
