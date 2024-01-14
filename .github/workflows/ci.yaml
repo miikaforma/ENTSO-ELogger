@@ -242,8 +242,8 @@ jobs:
           allowUpdates: true
           updateOnlyUnreleased: true
           artifacts: |
-            entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
-            entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}
+            "entsoe-logger-x86_64-unknown-linux-musl-${{ env.RELEASE_VERSION }}/*"
+            "entsoe-logger-aarch64-unknown-linux-musl-${{ env.RELEASE_VERSION }}/*"
       # - name: Upload binaries
       #   uses: actions/upload-release-asset@v1
       #   env:
