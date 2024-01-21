@@ -2,7 +2,7 @@ use std::cmp;
 
 use crate::settings;
 use crate::storage::influxdb::influx::{self, upsert_document_into_influxdb};
-use crate::storage::timescaledb::timescale::{self, upsert_document_into_timescaledb};
+use crate::storage::timescaledb::timescale::{self, upsert_document_into_timescaledb, refresh_views};
 use api::day_ahead_prices;
 use chrono::Duration as ChronoDuration;
 use chrono::{NaiveDateTime, TimeZone, Utc};
@@ -39,6 +39,13 @@ pub async fn fetch_prices_for_interval(
 
             if influx_result.is_err() {
                 error!("Error inserting into InfluxDB: {:?}", influx_result);
+            }
+
+            if timescale::is_enabled() {
+                if let Err(err) = refresh_views().await {
+                    // Handle the error here
+                    error!("Error refreshing the prices views: {:?}", err);
+                }
             }
 
             Ok(())

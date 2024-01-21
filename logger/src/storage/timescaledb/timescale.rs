@@ -83,6 +83,32 @@ pub async fn get_latest_time(in_domain: &str, out_domain: &str) -> Option<chrono
     Some(value)
 }
 
+pub async fn refresh_views() -> Result<(), Error> {
+    let client = connect_to_db().await?;
+
+    // Execute the refresh commands
+    client
+        .execute(
+            "CALL refresh_continuous_aggregate('average_kwh_price_day_by_day', NULL, NULL)",
+            &[],
+        )
+        .await?;
+    client
+        .execute(
+            "CALL refresh_continuous_aggregate('average_kwh_price_month_by_month', NULL, NULL)",
+            &[],
+        )
+        .await?;
+    client
+        .execute(
+            "CALL refresh_continuous_aggregate('average_kwh_price_year_by_year', NULL, NULL)",
+            &[],
+        )
+        .await?;
+
+    Ok(())
+}
+
 async fn connect_to_db() -> Result<tokio_postgres::Client, Error> {
     let (client, connection) = tokio_postgres::connect(
         &dotenv::var("TIMESCALEDB_CONNECTION_STRING").unwrap_or(

@@ -1,10 +1,12 @@
 use std::cmp;
 
 use actix_web::{post, web, HttpResponse, Responder};
-use chrono::{DateTime, Utc, ParseError, Duration, NaiveDateTime};
+use chrono::{DateTime, Duration, NaiveDateTime, ParseError, Utc};
 use serde::Deserialize;
 
-use crate::entsoapi::fetch::fetch_prices_for_interval;
+use crate::{
+    entsoapi::fetch::fetch_prices_for_interval, storage::timescaledb::timescale::refresh_views,
+};
 
 #[derive(Deserialize)]
 pub struct TimeParams {
@@ -19,11 +21,19 @@ pub struct TimeParams {
 pub async fn update_dayahead_prices(params: web::Json<TimeParams>) -> impl Responder {
     debug!("update_dayahead_prices requqest inbound");
     let security_token = dotenv::var("SECURITY_TOKEN").unwrap();
-    let in_domain = params.in_domain.clone().unwrap_or(dotenv::var("IN_DOMAIN").unwrap());
-    let out_domain = params.out_domain.clone().unwrap_or(dotenv::var("OUT_DOMAIN").unwrap());
+    let in_domain = params
+        .in_domain
+        .clone()
+        .unwrap_or(dotenv::var("IN_DOMAIN").unwrap());
+    let out_domain = params
+        .out_domain
+        .clone()
+        .unwrap_or(dotenv::var("OUT_DOMAIN").unwrap());
 
-    let start: Result<NaiveDateTime, ParseError> = NaiveDateTime::parse_from_str(&params.start, "%Y-%m-%dT%H:%MZ");
-    let stop: Result<NaiveDateTime, ParseError> = NaiveDateTime::parse_from_str(&params.stop, "%Y-%m-%dT%H:%MZ");
+    let start: Result<NaiveDateTime, ParseError> =
+        NaiveDateTime::parse_from_str(&params.start, "%Y-%m-%dT%H:%MZ");
+    let stop: Result<NaiveDateTime, ParseError> =
+        NaiveDateTime::parse_from_str(&params.stop, "%Y-%m-%dT%H:%MZ");
 
     if start.is_err() || stop.is_err() {
         return HttpResponse::BadRequest().body("Invalid date format");
@@ -45,7 +55,11 @@ pub async fn update_dayahead_prices(params: web::Json<TimeParams>) -> impl Respo
             &security_token,
             &in_domain,
             &out_domain,
-            &format!("{}/{}", current_start.format("%Y-%m-%dT%H:%MZ").to_string(), current_stop.format("%Y-%m-%dT%H:%MZ").to_string()),
+            &format!(
+                "{}/{}",
+                current_start.format("%Y-%m-%dT%H:%MZ").to_string(),
+                current_stop.format("%Y-%m-%dT%H:%MZ").to_string()
+            ),
         )
         .await
         {
@@ -57,6 +71,13 @@ pub async fn update_dayahead_prices(params: web::Json<TimeParams>) -> impl Respo
 
         current_start = current_stop;
     }
-    
-    return HttpResponse::Ok().body("ok")
+
+    if let Err(err) = refresh_views().await {
+        // Handle the error here
+        error!("Error refreshing the prices views: {:?}", err);
+        // Return an appropriate response
+        return HttpResponse::InternalServerError().body(err.to_string());
+    }
+
+    return HttpResponse::Ok().body("ok");
 }
