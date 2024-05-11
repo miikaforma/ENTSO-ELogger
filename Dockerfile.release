@@ -2,7 +2,7 @@
 FROM alpine as builder
 COPY entsoe-logger-x86_64-unknown-linux-musl /entsoe-logger-x86_64-unknown-linux-musl
 COPY entsoe-logger-aarch64-unknown-linux-musl /entsoe-logger-aarch64-unknown-linux-musl
-ARG TARGETARCH
+ARG TARGETPLATFORM
 
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then export BINARY_PATH=entsoe-logger-x86_64-unknown-linux-musl; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then export BINARY_PATH=entsoe-logger-aarch64-unknown-linux-musl; else export BINARY_PATH=entsoe-logger-x86_64-unknown-linux-musl; fi \
     && mv ./${BINARY_PATH} ./entsoe-logger

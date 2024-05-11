@@ -25,4 +25,4 @@ api = { path = "../api" }
 
 # Logging
 log = "0.4"
-flexi_logger = { version = "0.17", features = ["colors"] }
+flexi_logger = { version = "0.17", features = ["colors", "compress"] }
