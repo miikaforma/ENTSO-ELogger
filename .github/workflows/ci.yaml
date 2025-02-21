@@ -163,7 +163,7 @@ jobs:
   arm64:
     name: "Build and push arm64 entsoe-logger"
     needs: [buildVariables]
-    runs-on: self-hosted-arm64
+    runs-on: ubuntu-24.04-arm
     env:
       TAG_VERSION: ${{ needs.buildVariables.outputs.tag_version }}
       RELEASE_VERSION: ${{ needs.buildVariables.outputs.release_version }}
