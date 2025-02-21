@@ -1,6 +1,6 @@
 [package]
 name = "logger"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["miikaforma <miika.forma@codecontrol.fi>"]
 description = "Library for logging the Day Ahead price data from ENTSO-E Transparency Platform API"
 edition = "2018"
@@ -20,6 +20,7 @@ actix-web = "4.4"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 thiserror = "1.0.30"
 serde_yaml = "0.9.19"
+iso8601-duration = "0.2"
 
 api = { path = "../api" }
 

@@ -1,7 +1,10 @@
+use std::str::FromStr;
+
 use api::PublicationMarketDocument;
 use chrono::Duration as ChronoDuration;
 use chrono::{DateTime, Utc};
 use influxdb::{Client, InfluxDbWriteable, ReadQuery};
+use iso8601_duration::Duration as IsoDuration;
 
 use super::price_data::PriceData;
 
@@ -27,19 +30,32 @@ pub async fn upsert_document_into_influxdb(
     for time_serie in document.time_series.iter() {
         for period in time_serie.period.iter() {
             let start = &period.time_interval.start_as_utc();
-            if start.is_none() {
-                messages.push("InfluxDB | Skipping logging because start time couldn't be parsed".to_string());
+            let end = &period.time_interval.end_as_utc();
+            if start.is_none() || end.is_none() {
+                messages.push("InfluxDB | Skipping logging because start or end time couldn't be parsed".to_string());
                 continue;
             }
-
-            for point in period.point.iter() {
-                let time = start.unwrap() + ChronoDuration::hours((point.position - 1).into());
-
+        
+            let parsed_duration = IsoDuration::from_str(&period.resolution).expect("Failed to parse duration");
+            let resolution = ChronoDuration::seconds(parsed_duration.to_std().unwrap().as_secs() as i64);
+            let mut last_price = None;
+            let mut current_time = start.unwrap();
+        
+            while current_time < end.unwrap() {
+                let position = ((current_time - start.unwrap()).num_seconds() / resolution.num_seconds()) + 1;
+                let point = period.point.iter().find(|p| p.position == position as i32);
+                let price = if let Some(point) = point {
+                    last_price = Some(point.price);
+                    point.price
+                } else {
+                    last_price.unwrap_or(0.0)
+                };
+        
                 // Delete the current row if it's dirty
-                delete_if_dirty(&client, in_domain, out_domain, &time).await;
-
+                delete_if_dirty(&client, in_domain, out_domain, &current_time).await;
+        
                 let current_data = PriceData {
-                    time: time,
+                    time: current_time,
                     type_tag: document.r#type.to_string(),
                     in_domain_tag: in_domain.to_string(),
                     out_domain_tag: out_domain.to_string(),
@@ -49,19 +65,21 @@ pub async fn upsert_document_into_influxdb(
                     currency: time_serie.currency_unit.to_string(),
                     price_measure: time_serie.price_measure_unit.to_string(),
                     curve_type: time_serie.curve_type.to_string(),
-                    timestamp: time.format("%Y-%m-%dT%H:%MZ").to_string(),
-                    price: point.price,
+                    timestamp: current_time.format("%Y-%m-%dT%H:%MZ").to_string(),
+                    price: price,
                     dirty: None,
                 };
-
+        
                 let write_result = client
                     .query(&current_data.into_query("dayAheadPrices"))
                     .await;
                 if let Err(err) = write_result {
                     error!("Error writing to db: {}", err)
                 }
-
-                messages.push(format!("InfluxDB | {} - {:.2}", time, point.price));
+        
+                messages.push(format!("InfluxDB | {} - {:.2}", current_time, price));
+        
+                current_time = current_time + resolution;
             }
         }
     }

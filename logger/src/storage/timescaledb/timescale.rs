@@ -1,6 +1,9 @@
+use std::str::FromStr;
+
 use api::PublicationMarketDocument;
 use chrono::{Duration as ChronoDuration, Utc};
 use tokio_postgres::{Error, NoTls};
+use iso8601_duration::Duration as IsoDuration;
 
 use crate::settings::config_model::SettingsConfig;
 
@@ -28,26 +31,42 @@ pub async fn upsert_document_into_timescaledb(
     for time_serie in document.time_series.iter() {
         for period in time_serie.period.iter() {
             let start = &period.time_interval.start_as_utc();
-            if start.is_none() {
+            let end = &period.time_interval.end_as_utc();
+            if start.is_none() || end.is_none() {
                 messages.push(
-                    "TimescaleDB | Skipping logging because start time couldn't be parsed"
+                    "TimescaleDB | Skipping logging because start or end time couldn't be parsed"
                         .to_string(),
                 );
                 continue;
             }
-
-            for point in period.point.iter() {
-                let time = start.unwrap() + ChronoDuration::hours((point.position - 1).into());
-                let tax_percentage: f32 = settings.get_current_tax_percentage(time);
+        
+            let parsed_duration = IsoDuration::from_str(&period.resolution).expect("Failed to parse duration");
+            let resolution = ChronoDuration::seconds(parsed_duration.to_std().unwrap().as_secs() as i64);
+            let mut last_price = None;
+            let mut current_time = start.unwrap();
+        
+            while current_time < end.unwrap() {
+                let position = ((current_time - start.unwrap()).num_seconds() / resolution.num_seconds()) + 1;
+                let point = period.point.iter().find(|p| p.position == position as i32);
+                let price = if let Some(point) = point {
+                    last_price = Some(point.price);
+                    point.price
+                } else {
+                    last_price.unwrap_or(0.0)
+                };
+        
+                let tax_percentage: f32 = settings.get_current_tax_percentage(current_time);
                 let _ = trans
                     .execute("INSERT INTO day_ahead_prices (time, currency, in_domain, out_domain, price, measure_unit, source, tax_percentage) 
                                         VALUES ($1, $2, $3, $4, $5, $6, 'entsoe', $7)
                                         ON CONFLICT (time, in_domain, out_domain) DO UPDATE
                                             SET currency = $2, price = $5, measure_unit = $6, source = 'entsoe', tax_percentage = $7",
-                    &[&time, &time_serie.currency_unit.to_string(), &in_domain.to_string(), &out_domain.to_string(), &point.price, &time_serie.price_measure_unit.to_string(), &tax_percentage])
+                    &[&current_time, &time_serie.currency_unit.to_string(), &in_domain.to_string(), &out_domain.to_string(), &price, &time_serie.price_measure_unit.to_string(), &tax_percentage])
                 .await?;
-
-                messages.push(format!("TimescaleDB | {} - {:.2}", time, point.price));
+        
+                messages.push(format!("TimescaleDB | {} - {:.2}", current_time, price));
+        
+                current_time = current_time + resolution;
             }
         }
     }
