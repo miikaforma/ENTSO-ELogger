@@ -120,8 +120,15 @@ pub async fn get_latest_time(in_domain: &str, out_domain: &str) -> Option<chrono
 async fn connect_to_db() -> Client {
     let database_url = dotenv::var("DATABASE_URL").unwrap_or("http://localhost:8086".to_string());
     let database_name = dotenv::var("DATABASE_NAME").unwrap_or("entsoe".to_string());
+    let username = dotenv::var("INFLUXDB_USERNAME").unwrap_or("".to_string());
+    let password = dotenv::var("INFLUXDB_PASSWORD").unwrap_or("".to_string());
 
-    Client::new(&database_url, &database_name)
+    let client = Client::new(&database_url, &database_name);
+    if !username.is_empty() && !password.is_empty() {
+        client.with_auth(&username, &password)
+    } else {
+        client
+    }
 }
 
 async fn delete_if_dirty(client: &Client, in_domain: &str, out_domain: &str, time: &DateTime<Utc>) {
