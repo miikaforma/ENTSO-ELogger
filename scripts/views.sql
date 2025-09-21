@@ -1,6 +1,20 @@
 -- Description: Create materialized views for the database
 
 -- Create a materialized view for the daily averages in day-ahead prices
+CREATE MATERIALIZED VIEW average_kwh_price_hour_by_hour
+    with (timescaledb.continuous) as
+SELECT time_bucket('1 hour', time, 'Europe/Helsinki') AS date,
+    AVG(price / 10) AS avg_price,
+    AVG(price / 10 * (tax_percentage / 100 + 1)) AS avg_price_with_tax
+FROM day_ahead_prices
+WHERE in_domain = '10YFI-1--------U' AND out_domain = '10YFI-1--------U'
+GROUP BY date
+ORDER BY date;
+
+-- To drop the view for the daily averages in day-ahead prices, run:
+-- DROP MATERIALIZED VIEW average_kwh_price_hour_by_hour;
+
+-- Create a materialized view for the daily averages in day-ahead prices
 CREATE MATERIALIZED VIEW average_kwh_price_day_by_day
     with (timescaledb.continuous) as
 SELECT time_bucket('1 day', time, 'Europe/Helsinki') AS date,
@@ -59,6 +73,7 @@ SELECT add_continuous_aggregate_policy('average_kwh_price_day_by_day',
    schedule_interval => INTERVAL '1 hour');
 
 -- Manual refresh for the views
+-- CALL refresh_continuous_aggregate('average_kwh_price_hour_by_hour', NULL, NULL);
 -- CALL refresh_continuous_aggregate('average_kwh_price_day_by_day', NULL, NULL);
 -- CALL refresh_continuous_aggregate('average_kwh_price_month_by_month', NULL, NULL);
 -- CALL refresh_continuous_aggregate('average_kwh_price_year_by_year', NULL, NULL);

@@ -108,6 +108,12 @@ pub async fn refresh_views() -> Result<(), Error> {
     // Execute the refresh commands
     client
         .execute(
+            "CALL refresh_continuous_aggregate('average_kwh_price_hour_by_hour', NULL, NULL)",
+            &[],
+        )
+        .await?;
+    client
+        .execute(
             "CALL refresh_continuous_aggregate('average_kwh_price_day_by_day', NULL, NULL)",
             &[],
         )
